@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>보듬교육학원 전자책 PDF 생성기</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        :root {
+            --main-green: #006837;
+            --light-green: #e8f5e9;
+            --bg-dark: #1a1a2e;
+            --bg-panel: #16213e;
+            --text-light: #eaeaea;
+            --text-muted: #a0a0a0;
+            --accent: #00d09c;
+            --border-color: #2d3a5f;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Pretendard Variable", Pretendard, -apple-system, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-light);
+            min-height: 100vh;
+        }
+
+        /* 헤더 */
+        .app-header {
+            background: linear-gradient(135deg, var(--bg-panel) 0%, #0f3460 100%);
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-icon {
+            width: 50px;
+            height: 50px;
+            background: var(--main-green);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 800;
+            color: white;
+        }
+
+        .logo-text h1 {
+            font-size: 22px;
+            font-weight: 700;
+            color: white;
+        }
+
+        .logo-text span {
+            font-size: 12px;
+            color: var(--accent);
+            letter-spacing: 2px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--main-green);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #008847;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,104,55,0.4);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-light);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border-color);
+        }
+
+        /* 메인 레이아웃 */
+        .main-container {
+            display: flex;
+            height: calc(100vh - 90px);
+        }
+
+        /* 왼쪽 편집 패널 */
+        .edit-panel {
+            width: 420px;
+            background: var(--bg-panel);
+            border-right: 1px solid var(--border-color);
+            overflow-y: auto;
+            padding: 25px;
+        }
+
+        .panel-section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 16px;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        .input-group {
+            margin-bottom: 18px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .input-group input,
+        .input-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-light);
+            font-family: inherit;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .input-group input:focus,
+        .input-group textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            background: rgba(255,255,255,0.08);
+            box-shadow: 0 0 0 3px rgba(0,208,156,0.1);
+        }
+
+        .input-group textarea {
+            min-height: 120px;
+            resize: vertical;
+            line-height: 1.6;
+        }
+
+        /* 페이지 탭 */
+        .page-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .page-tab {
+            padding: 10px 18px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .page-tab:hover {
+            background: rgba(255,255,255,0.1);
+            color: var(--text-light);
+        }
+
+        .page-tab.active {
+            background: var(--main-green);
+            border-color: var(--main-green);
+            color: white;
+        }
+
+        /* 오른쪽 미리보기 패널 */
+        .preview-panel {
+            flex: 1;
+            background: #2a2a3e;
+            overflow: auto;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 900px;
+            margin-bottom: 30px;
+        }
+
+        .preview-title {
+            font-size: 16px;
+            color: var(--text-muted);
+        }
+
+        .preview-title span {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .zoom-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .zoom-btn {
+            width: 36px;
+            height: 36px;
+            border: 1px solid var(--border-color);
+            background: transparent;
+            color: var(--text-light);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.2s;
+        }
+
+        .zoom-btn:hover {
+            background: var(--border-color);
+        }
+
+        .zoom-level {
+            font-size: 13px;
+            color: var(--text-muted);
+            min-width: 50px;
+            text-align: center;
+        }
+
+        /* PDF 페이지 미리보기 */
+        .pdf-preview-container {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            align-items: center;
+        }
+
+        .page-a4 {
+            background: white;
+            width: 210mm;
+            min-height: 297mm;
+            padding: 20mm 25mm 25mm 25mm;
+            position: relative;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            transform-origin: top center;
+            transition: transform 0.3s ease;
+        }
+
+        /* 머리말 */
+        .page-header-bar {
+            position: absolute;
+            top: 12mm;
+            left: 25mm;
+            right: 25mm;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 9pt;
+            color: #888;
+        }
+
+        .header-left {
+            font-weight: 500;
+        }
+
+        .header-right {
+            color: var(--main-green);
+            font-weight: 600;
+        }
+
+        /* 상단 섹션 */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15mm;
+            margin-top: 5mm;
+        }
+
+        .chapter-num {
+            font-size: 72pt;
+            font-weight: 200;
+            color: var(--main-green);
+            line-height: 1;
+            letter-spacing: -3px;
+        }
+
+        .title-section {
+            width: 55%;
+            text-align: right;
+        }
+
+        .line {
+            width: 100%;
+            height: 2px;
+            background: var(--main-green);
+            margin-bottom: 12px;
+        }
+
+        .chapter-title {
+            font-size: 24pt;
+            font-weight: 700;
+            color: var(--main-green);
+            letter-spacing: -0.5px;
+            line-height: 1.3;
+        }
+
+        /* 본문 */
+        .content {
+            flex: 1;
+            line-height: 2;
+            font-size: 11pt;
+            text-align: justify;
+            word-break: keep-all;
+        }
+
+        .content p {
+            margin-bottom: 20px;
+            text-indent: 1em;
+        }
+
+        /* 꼬리말 */
+        .footer {
+            position: absolute;
+            bottom: 15mm;
+            left: 25mm;
+            right: 25mm;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .footer-left {
+            font-size: 8pt;
+            color: #999;
+        }
+
+        .footer-right {
+            text-align: right;
+        }
+
+        .page-number {
+            font-size: 14pt;
+            font-weight: 800;
+            color: var(--main-green);
+            margin-bottom: 3px;
+        }
+
+        .book-info {
+            font-size: 9pt;
+            color: var(--main-green);
+            opacity: 0.8;
+            font-weight: 500;
+        }
+
+        /* 페이지 구분선 */
+        .page-divider {
+            width: 210mm;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 12px;
+            padding: 10px 0;
+        }
+
+        /* 반응형 */
+        @media (max-width: 1400px) {
+            .edit-panel {
+                width: 380px;
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .main-container {
+                flex-direction: column;
+            }
+            .edit-panel {
+                width: 100%;
+                max-height: 50vh;
+            }
+            .preview-panel {
+                padding: 20px;
+            }
+            .page-a4 {
+                transform: scale(0.6);
+                margin: -80mm 0;
+            }
+        }
+
+        /* 인쇄 설정 */
+        @media print {
+            body { background: white; }
+            .app-header, .edit-panel, .preview-header, .page-divider { display: none !important; }
+            .preview-panel { padding: 0; background: white; }
+            .page-a4 { 
+                box-shadow: none; 
+                margin: 0;
+                page-break-after: always;
+                transform: none !important;
+            }
+        }
+
+        /* 스크롤바 스타일 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3d4a6f;
+        }
+
+        /* 애니메이션 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .page-a4 {
+            animation: fadeIn 0.4s ease;
+        }
+
+        /* 토스트 알림 */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: var(--main-green);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-weight: 600;
+            box-shadow: 0 5px 20px rgba(0,104,55,0.4);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <header class="app-header">
+        <div class="logo">
+            <div class="logo-icon">보</div>
+            <div class="logo-text">
+                <h1>보듬교육학원</h1>
+                <span>E-BOOK PDF GENERATOR</span>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-secondary" onclick="resetAll()">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                    <path d="M3 3v5h5"/>
+                </svg>
+                초기화
+            </button>
+            <button class="btn btn-primary" onclick="generatePDF()">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                PDF 다운로드
+            </button>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <!-- 왼쪽 편집 패널 -->
+        <aside class="edit-panel">
+            <div class="panel-section">
+                <div class="section-title">문서 설정</div>
+                <div class="input-group">
+                    <label>머리말 (좌측)</label>
+                    <input type="text" id="headerLeft" value="보듬교육학원 전자책" oninput="updatePreview()">
+                </div>
+                <div class="input-group">
+                    <label>머리말 (우측)</label>
+                    <input type="text" id="headerRight" value="Q&A 시리즈" oninput="updatePreview()">
+                </div>
+                <div class="input-group">
+                    <label>꼬리말 정보</label>
+                    <input type="text" id="bookInfo" value="보듬교육학원 | 함께 성장하는 배움의 공간" oninput="updatePreview()">
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <div class="section-title">페이지 선택</div>
+                <div class="page-tabs" id="pageTabs">
+                    <button class="page-tab active" onclick="selectPage(1)">1페이지</button>
+                    <button class="page-tab" onclick="selectPage(2)">2페이지</button>
+                    <button class="page-tab" onclick="selectPage(3)">3페이지</button>
+                    <button class="page-tab" onclick="selectPage(4)">4페이지</button>
+                    <button class="page-tab" onclick="selectPage(5)">5페이지</button>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <div class="section-title">페이지 내용</div>
+                <div class="input-group">
+                    <label>질문 (제목)</label>
+                    <input type="text" id="questionInput" placeholder="예: 효과적인 공부 방법은 무엇인가요?" oninput="updateCurrentPage()">
+                </div>
+                <div class="input-group">
+                    <label>답변 (본문)</label>
+                    <textarea id="answerInput" placeholder="답변 내용을 입력하세요. 문단 구분은 엔터 두 번으로 합니다." oninput="updateCurrentPage()"></textarea>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 오른쪽 미리보기 패널 -->
+        <section class="preview-panel">
+            <div class="preview-header">
+                <div class="preview-title">
+                    미리보기 <span>| 총 <span id="totalPages">5</span>페이지</span>
+                </div>
+                <div class="zoom-controls">
+                    <button class="zoom-btn" onclick="zoomOut()">−</button>
+                    <span class="zoom-level" id="zoomLevel">70%</span>
+                    <button class="zoom-btn" onclick="zoomIn()">+</button>
+                </div>
+            </div>
+
+            <div class="pdf-preview-container" id="pdfPreview">
+                <!-- 페이지들이 여기에 동적으로 생성됩니다 -->
+            </div>
+        </section>
+    </main>
+
+    <div class="toast" id="toast">PDF 다운로드 준비 중...</div>
+
+    <script>
+        // 페이지 데이터 초기화
+        let pageData = [
+            {
+                question: "효과적인 학습 전략이란 무엇인가요?",
+                answer: "효과적인 학습 전략의 핵심은 단순한 반복이 아닌 '능동적 회상(Active Recall)'과 '간격 반복(Spaced Repetition)'입니다. 연구에 따르면, 단순히 교재를 반복해서 읽는 것보다 스스로 내용을 떠올려보는 연습이 기억 정착에 훨씬 효과적입니다.\n\n첫째, 학습 후 24시간 이내에 복습하는 것이 중요합니다. 에빙하우스의 망각 곡선에 따르면, 학습 직후 급격히 망각이 진행되므로 초기 복습이 핵심입니다.\n\n둘째, 문제 풀이와 자기 설명을 병행하세요. 배운 내용을 자신의 말로 설명할 수 있다면 진정으로 이해한 것입니다.\n\n셋째, 학습 환경을 다양화하세요. 같은 장소에서만 공부하면 해당 환경에 종속된 기억이 형성될 수 있습니다."
+            },
+            {
+                question: "시험 불안을 극복하는 방법은?",
+                answer: "시험 불안은 대부분의 학생들이 경험하는 자연스러운 현상입니다. 적절한 긴장감은 오히려 집중력을 높여주지만, 과도한 불안은 실력 발휘를 방해합니다.\n\n먼저, 충분한 준비가 불안 감소의 가장 확실한 방법입니다. 모의고사나 기출문제를 실전처럼 풀어보면 실제 시험 상황에 대한 두려움이 줄어듭니다.\n\n호흡 조절 기법도 효과적입니다. 4-7-8 호흡법(4초 들이쉬고, 7초 참고, 8초 내쉬기)은 즉각적으로 긴장을 완화시켜 줍니다.\n\n부정적인 자기 대화를 긍정적으로 바꾸는 것도 중요합니다. '망하면 어떡하지'가 아닌 '할 수 있는 만큼 최선을 다하자'로 생각을 전환하세요."
+            },
+            {
+                question: "집중력을 높이려면 어떻게 해야 하나요?",
+                answer: "집중력은 타고나는 것이 아니라 훈련으로 향상시킬 수 있습니다. 현대인의 평균 집중 시간이 점점 짧아지고 있지만, 올바른 방법으로 이를 극복할 수 있습니다.\n\n포모도로 기법을 활용해보세요. 25분 집중 후 5분 휴식의 사이클을 반복하면 지속적인 집중이 가능합니다. 4사이클 후에는 15-30분의 긴 휴식을 취합니다.\n\n디지털 디톡스도 필수입니다. 공부할 때는 스마트폰을 다른 방에 두거나 비행기 모드로 설정하세요. 알림 하나에 끊긴 집중을 회복하는 데 평균 23분이 걸린다는 연구 결과가 있습니다.\n\n수면과 운동의 중요성도 잊지 마세요. 7-8시간의 충분한 수면과 규칙적인 유산소 운동은 뇌 기능을 최적화합니다."
+            },
+            {
+                question: "암기력을 향상시키는 비법이 있나요?",
+                answer: "암기력은 단순한 반복보다 '의미 있는 연결'을 통해 향상됩니다. 뇌는 고립된 정보보다 서로 연결된 정보를 훨씬 잘 기억합니다.\n\n기억의 궁전(Memory Palace) 기법은 가장 강력한 암기 방법 중 하나입니다. 익숙한 장소를 떠올리며 암기할 내용을 각 위치에 배치하는 상상을 합니다. 시각적 이미지와 공간 기억을 활용하기 때문에 효과가 뛰어납니다.\n\n스토리텔링도 효과적입니다. 외워야 할 항목들을 하나의 이야기로 엮으면 기억에 오래 남습니다. 황당하고 재미있을수록 더 잘 기억됩니다.\n\n청크(Chunk) 만들기도 유용합니다. 긴 전화번호를 세 덩어리로 나누어 외우듯이, 많은 정보를 의미 있는 묶음으로 그룹화하면 작업 기억의 한계를 극복할 수 있습니다."
+            },
+            {
+                question: "공부 의욕이 없을 때는 어떻게 해야 하나요?",
+                answer: "동기 부여의 저하는 누구에게나 찾아오는 자연스러운 현상입니다. 중요한 것은 이 시기를 어떻게 관리하느냐입니다.\n\n'2분 규칙'을 적용해보세요. 의욕이 없을 때도 딱 2분만 시작해보는 것입니다. 대부분의 경우, 시작하고 나면 계속하게 됩니다. 시작이 반입니다.\n\n목표를 작은 단위로 쪼개세요. '오늘 50페이지 읽기'보다 '10페이지씩 5번 읽기'가 심리적 부담이 적습니다. 작은 성취감이 쌓이면 큰 동기가 됩니다.\n\n환경을 바꾸는 것도 도움이 됩니다. 도서관, 카페, 스터디 카페 등 장소를 바꾸면 새로운 자극이 생깁니다.\n\n마지막으로, 자신만의 보상 시스템을 만드세요. 목표 달성 후 좋아하는 간식이나 여가 활동으로 자신을 격려하면 학습에 긍정적인 연관을 형성할 수 있습니다."
+            }
+        ];
+
+        let currentPage = 1;
+        let zoomScale = 0.7;
+        let headerLeft = "보듬교육학원 전자책";
+        let headerRight = "Q&A 시리즈";
+        let bookInfo = "보듬교육학원 | 함께 성장하는 배움의 공간";
+
+        // 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            updatePreview();
+            loadPageToEditor(1);
+        });
+
+        // 페이지 선택
+        function selectPage(pageNum) {
+            currentPage = pageNum;
+            
+            // 탭 활성화 상태 업데이트
+            document.querySelectorAll('.page-tab').forEach((tab, index) => {
+                tab.classList.toggle('active', index + 1 === pageNum);
+            });
+            
+            loadPageToEditor(pageNum);
+        }
+
+        // 에디터에 페이지 내용 로드
+        function loadPageToEditor(pageNum) {
+            const data = pageData[pageNum - 1];
+            document.getElementById('questionInput').value = data.question;
+            document.getElementById('answerInput').value = data.answer;
+        }
+
+        // 현재 페이지 업데이트
+        function updateCurrentPage() {
+            pageData[currentPage - 1] = {
+                question: document.getElementById('questionInput').value,
+                answer: document.getElementById('answerInput').value
+            };
+            updatePreview();
+        }
+
+        // 미리보기 업데이트
+        function updatePreview() {
+            headerLeft = document.getElementById('headerLeft').value;
+            headerRight = document.getElementById('headerRight').value;
+            bookInfo = document.getElementById('bookInfo').value;
+
+            const container = document.getElementById('pdfPreview');
+            container.innerHTML = '';
+
+            pageData.forEach((data, index) => {
+                if (index > 0) {
+                    const divider = document.createElement('div');
+                    divider.className = 'page-divider';
+                    divider.textContent = `― ${index + 1}페이지 ―`;
+                    container.appendChild(divider);
+                }
+
+                const pageElement = createPageElement(data, index + 1);
+                container.appendChild(pageElement);
+            });
+
+            updateZoom();
+        }
+
+        // 페이지 요소 생성
+        function createPageElement(data, pageNum) {
+            const page = document.createElement('div');
+            page.className = 'page-a4';
+            page.id = `page-${pageNum}`;
+
+            // 본문 내용을 문단으로 분리
+            const paragraphs = data.answer.split('\n\n').filter(p => p.trim());
+            const contentHtml = paragraphs.map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('');
+
+            page.innerHTML = `
+                <div class="page-header-bar">
+                    <div class="header-left">${headerLeft}</div>
+                    <div class="header-right">${headerRight}</div>
+                </div>
+                
+                <header class="header">
+                    <div class="chapter-num">${pageNum}.</div>
+                    <div class="title-section">
+                        <div class="line"></div>
+                        <h1 class="chapter-title">${data.question}</h1>
+                    </div>
+                </header>
+
+                <article class="content">
+                    ${contentHtml}
+                </article>
+
+                <footer class="footer">
+                    <div class="footer-left">${bookInfo}</div>
+                    <div class="footer-right">
+                        <div class="page-number">${pageNum}</div>
+                        <div class="book-info">보듬교육학원</div>
+                    </div>
+                </footer>
+            `;
+
+            return page;
+        }
+
+        // 줌 컨트롤
+        function zoomIn() {
+            if (zoomScale < 1.2) {
+                zoomScale += 0.1;
+                updateZoom();
+            }
+        }
+
+        function zoomOut() {
+            if (zoomScale > 0.3) {
+                zoomScale -= 0.1;
+                updateZoom();
+            }
+        }
+
+        function updateZoom() {
+            document.querySelectorAll('.page-a4').forEach(page => {
+                page.style.transform = `scale(${zoomScale})`;
+                page.style.marginBottom = `${-297 * (1 - zoomScale)}mm`;
+            });
+            document.getElementById('zoomLevel').textContent = `${Math.round(zoomScale * 100)}%`;
+        }
+
+        // 초기화
+        function resetAll() {
+            if (confirm('모든 내용을 초기화하시겠습니까?')) {
+                pageData = pageData.map((_, i) => ({
+                    question: '',
+                    answer: ''
+                }));
+                document.getElementById('headerLeft').value = '보듬교육학원 전자책';
+                document.getElementById('headerRight').value = 'Q&A 시리즈';
+                document.getElementById('bookInfo').value = '보듬교육학원 | 함께 성장하는 배움의 공간';
+                selectPage(1);
+                updatePreview();
+            }
+        }
+
+        // PDF 생성
+        async function generatePDF() {
+            showToast('PDF 생성 중...');
+
+            const element = document.getElementById('pdfPreview');
+            const pages = element.querySelectorAll('.page-a4');
+            
+            // 줌 리셋
+            pages.forEach(page => {
+                page.style.transform = 'none';
+                page.style.marginBottom = '0';
+            });
+
+            // 페이지 구분선 숨기기
+            const dividers = element.querySelectorAll('.page-divider');
+            dividers.forEach(d => d.style.display = 'none');
+
+            const opt = {
+                margin: 0,
+                filename: '보듬교육학원_전자책.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { 
+                    scale: 2,
+                    useCORS: true,
+                    letterRendering: true
+                },
+                jsPDF: { 
+                    unit: 'mm', 
+                    format: 'a4', 
+                    orientation: 'portrait' 
+                },
+                pagebreak: { mode: ['css', 'legacy'], before: '.page-a4' }
+            };
+
+            try {
+                await html2pdf().set(opt).from(element).save();
+                showToast('PDF 다운로드 완료!');
+            } catch (error) {
+                console.error('PDF 생성 오류:', error);
+                showToast('PDF 생성 중 오류가 발생했습니다.');
+            }
+
+            // 원래 상태로 복원
+            dividers.forEach(d => d.style.display = '');
+            updateZoom();
+        }
+
+        // 토스트 알림
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
