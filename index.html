@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>보듬교육학원 전자책 PDF 생성기</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root {
             --main-green: #006837;
@@ -16,6 +17,7 @@
             --text-muted: #a0a0a0;
             --accent: #00d09c;
             --border-color: #2d3a5f;
+            --danger: #e74c3c;
         }
 
         * {
@@ -34,62 +36,68 @@
         /* 헤더 */
         .app-header {
             background: linear-gradient(135deg, var(--bg-panel) 0%, #0f3460 100%);
-            padding: 20px 40px;
+            padding: 15px 30px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             border-bottom: 1px solid var(--border-color);
             box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
 
         .logo {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 12px;
         }
 
         .logo-icon {
-            width: 50px;
-            height: 50px;
+            width: 42px;
+            height: 42px;
             background: var(--main-green);
-            border-radius: 12px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
+            font-size: 20px;
             font-weight: 800;
             color: white;
         }
 
         .logo-text h1 {
-            font-size: 22px;
+            font-size: 18px;
             font-weight: 700;
             color: white;
         }
 
         .logo-text span {
-            font-size: 12px;
+            font-size: 10px;
             color: var(--accent);
             letter-spacing: 2px;
         }
 
         .header-actions {
             display: flex;
-            gap: 12px;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
         }
 
         .btn {
-            padding: 12px 24px;
+            padding: 10px 16px;
             border: none;
             border-radius: 8px;
             font-family: inherit;
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
+            white-space: nowrap;
         }
 
         .btn-primary {
@@ -113,10 +121,39 @@
             background: var(--border-color);
         }
 
+        .btn-accent {
+            background: var(--accent);
+            color: #1a1a2e;
+        }
+
+        .btn-accent:hover {
+            background: #00b386;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 11px;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
         /* 메인 레이아웃 */
         .main-container {
             display: flex;
-            height: calc(100vh - 90px);
+            height: calc(100vh - 72px);
         }
 
         /* 왼쪽 편집 패널 */
@@ -124,21 +161,61 @@
             width: 420px;
             background: var(--bg-panel);
             border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .panel-tab {
+            flex: 1;
+            padding: 12px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .panel-tab:hover {
+            color: var(--text-light);
+            background: rgba(255,255,255,0.05);
+        }
+
+        .panel-tab.active {
+            color: var(--accent);
+            background: rgba(0,208,156,0.1);
+            border-bottom: 2px solid var(--accent);
+        }
+
+        .panel-content {
+            flex: 1;
             overflow-y: auto;
-            padding: 25px;
+            padding: 20px;
         }
 
         .panel-section {
-            margin-bottom: 30px;
+            display: none;
+        }
+
+        .panel-section.active {
+            display: block;
         }
 
         .section-title {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 700;
             color: var(--accent);
             text-transform: uppercase;
             letter-spacing: 1.5px;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -146,34 +223,34 @@
 
         .section-title::before {
             content: '';
-            width: 4px;
-            height: 16px;
+            width: 3px;
+            height: 14px;
             background: var(--accent);
             border-radius: 2px;
         }
 
         .input-group {
-            margin-bottom: 18px;
+            margin-bottom: 15px;
         }
 
         .input-group label {
             display: block;
-            font-size: 13px;
+            font-size: 12px;
             color: var(--text-muted);
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             font-weight: 500;
         }
 
         .input-group input,
         .input-group textarea {
             width: 100%;
-            padding: 12px 15px;
+            padding: 10px 12px;
             background: rgba(255,255,255,0.05);
             border: 1px solid var(--border-color);
-            border-radius: 8px;
+            border-radius: 6px;
             color: var(--text-light);
             font-family: inherit;
-            font-size: 14px;
+            font-size: 13px;
             transition: all 0.3s ease;
         }
 
@@ -182,44 +259,185 @@
             outline: none;
             border-color: var(--accent);
             background: rgba(255,255,255,0.08);
-            box-shadow: 0 0 0 3px rgba(0,208,156,0.1);
         }
 
         .input-group textarea {
-            min-height: 120px;
+            min-height: 280px;
             resize: vertical;
-            line-height: 1.6;
+            line-height: 1.8;
+            font-size: 14px;
         }
 
-        /* 페이지 탭 */
-        .page-tabs {
+        .char-count {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-align: right;
+            margin-top: 4px;
+        }
+
+        .char-count.warning {
+            color: #f39c12;
+        }
+
+        .char-count.overflow {
+            color: var(--danger);
+        }
+
+        /* 페이지 목록 */
+        .page-list-header {
             display: flex;
-            gap: 8px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
         }
 
-        .page-tab {
-            padding: 10px 18px;
-            background: rgba(255,255,255,0.05);
+        .page-count {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .page-count strong {
+            color: var(--accent);
+        }
+
+        .page-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: calc(100vh - 350px);
+            overflow-y: auto;
+        }
+
+        .page-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px;
+            background: rgba(255,255,255,0.03);
             border: 1px solid var(--border-color);
             border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .page-item:hover {
+            background: rgba(255,255,255,0.06);
+            border-color: var(--accent);
+        }
+
+        .page-item.active {
+            background: rgba(0,208,156,0.1);
+            border-color: var(--accent);
+        }
+
+        .page-item.dragging {
+            opacity: 0.5;
+            background: rgba(0,208,156,0.2);
+        }
+
+        .page-item-num {
+            width: 28px;
+            height: 28px;
+            background: var(--main-green);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .page-item-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .page-item-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-light);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .page-item-preview {
+            font-size: 10px;
             color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-top: 2px;
+        }
+
+        .page-item-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            background: rgba(0,208,156,0.2);
+            color: var(--accent);
+            border-radius: 4px;
+            margin-left: 6px;
+        }
+
+        .page-item-actions {
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .page-item:hover .page-item-actions {
+            opacity: 1;
+        }
+
+        .page-item-btn {
+            width: 24px;
+            height: 24px;
+            border: none;
+            background: rgba(255,255,255,0.1);
+            color: var(--text-muted);
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .page-item-btn:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        .page-item-btn.drag-handle {
+            cursor: grab;
+        }
+
+        .page-item-btn.drag-handle:hover {
+            background: var(--accent);
+            color: white;
+        }
+
+        .add-page-btn {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            background: rgba(0,208,156,0.1);
+            border: 2px dashed var(--accent);
+            border-radius: 8px;
+            color: var(--accent);
+            font-family: inherit;
             font-size: 13px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.2s;
         }
 
-        .page-tab:hover {
-            background: rgba(255,255,255,0.1);
-            color: var(--text-light);
-        }
-
-        .page-tab.active {
-            background: var(--main-green);
-            border-color: var(--main-green);
-            color: white;
+        .add-page-btn:hover {
+            background: rgba(0,208,156,0.2);
         }
 
         /* 오른쪽 미리보기 패널 */
@@ -227,7 +445,7 @@
             flex: 1;
             background: #2a2a3e;
             overflow: auto;
-            padding: 40px;
+            padding: 30px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -239,11 +457,16 @@
             align-items: center;
             width: 100%;
             max-width: 900px;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
+            position: sticky;
+            top: 0;
+            background: #2a2a3e;
+            padding: 10px 0;
+            z-index: 10;
         }
 
         .preview-title {
-            font-size: 16px;
+            font-size: 14px;
             color: var(--text-muted);
         }
 
@@ -252,21 +475,49 @@
             font-weight: 600;
         }
 
+        .preview-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .view-toggle {
+            display: flex;
+            background: var(--bg-panel);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .view-toggle-btn {
+            padding: 8px 12px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .view-toggle-btn.active {
+            background: var(--accent);
+            color: white;
+        }
+
         .zoom-controls {
             display: flex;
-            gap: 8px;
+            gap: 6px;
             align-items: center;
         }
 
         .zoom-btn {
-            width: 36px;
-            height: 36px;
+            width: 28px;
+            height: 28px;
             border: 1px solid var(--border-color);
             background: transparent;
             color: var(--text-light);
-            border-radius: 6px;
+            border-radius: 4px;
             cursor: pointer;
-            font-size: 18px;
+            font-size: 14px;
             transition: all 0.2s;
         }
 
@@ -275,9 +526,9 @@
         }
 
         .zoom-level {
-            font-size: 13px;
+            font-size: 11px;
             color: var(--text-muted);
-            min-width: 50px;
+            min-width: 36px;
             text-align: center;
         }
 
@@ -285,35 +536,82 @@
         .pdf-preview-container {
             display: flex;
             flex-direction: column;
-            gap: 30px;
+            gap: 25px;
             align-items: center;
+        }
+
+        .pdf-preview-container.grid-view {
+            flex-direction: row;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .pdf-preview-container.grid-view .page-wrapper {
+            margin: 0;
+        }
+
+        .pdf-preview-container.grid-view .page-a4 {
+            transform: scale(0.25) !important;
+        }
+
+        .pdf-preview-container.grid-view .page-wrapper {
+            height: calc(297mm * 0.25) !important;
+            width: calc(210mm * 0.25);
+        }
+
+        .page-wrapper {
+            position: relative;
+        }
+
+        .page-label {
+            position: absolute;
+            top: -22px;
+            left: 0;
+            font-size: 11px;
+            color: var(--text-muted);
+            background: var(--bg-panel);
+            padding: 3px 10px;
+            border-radius: 4px;
+        }
+
+        .page-label .cont-badge {
+            color: var(--accent);
+            font-size: 10px;
+            margin-left: 5px;
         }
 
         .page-a4 {
             background: white;
             width: 210mm;
-            min-height: 297mm;
-            padding: 20mm 25mm 25mm 25mm;
+            height: 297mm;
+            padding: 0;
             position: relative;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.4);
             color: #333;
-            display: flex;
-            flex-direction: column;
+            overflow: hidden;
             transform-origin: top center;
             transition: transform 0.3s ease;
         }
 
+        .page-inner {
+            position: absolute;
+            top: 18mm;
+            left: 22mm;
+            right: 22mm;
+            bottom: 18mm;
+            display: flex;
+            flex-direction: column;
+        }
+
         /* 머리말 */
         .page-header-bar {
-            position: absolute;
-            top: 12mm;
-            left: 25mm;
-            right: 25mm;
             display: flex;
             justify-content: space-between;
             align-items: center;
             font-size: 9pt;
             color: #888;
+            padding-bottom: 6mm;
         }
 
         .header-left {
@@ -326,65 +624,75 @@
         }
 
         /* 상단 섹션 */
-        .header {
+        .content-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 15mm;
-            margin-top: 5mm;
+            margin-bottom: 10mm;
         }
 
         .chapter-num {
-            font-size: 72pt;
+            font-size: 55pt;
             font-weight: 200;
             color: var(--main-green);
             line-height: 1;
-            letter-spacing: -3px;
+            letter-spacing: -2px;
+            flex-shrink: 0;
         }
 
         .title-section {
-            width: 55%;
+            width: 60%;
             text-align: right;
+            padding-top: 5mm;
         }
 
-        .line {
+        .title-line {
             width: 100%;
             height: 2px;
             background: var(--main-green);
-            margin-bottom: 12px;
+            margin-bottom: 8px;
         }
 
         .chapter-title {
-            font-size: 24pt;
+            font-size: 17pt;
             font-weight: 700;
             color: var(--main-green);
             letter-spacing: -0.5px;
-            line-height: 1.3;
-        }
-
-        /* 본문 */
-        .content {
-            flex: 1;
-            line-height: 2;
-            font-size: 11pt;
-            text-align: justify;
+            line-height: 1.4;
             word-break: keep-all;
         }
 
-        .content p {
-            margin-bottom: 20px;
+        /* 본문 */
+        .content-body {
+            flex: 1;
+            line-height: 2;
+            font-size: 12pt;
+            text-align: justify;
+            word-break: keep-all;
+            overflow: hidden;
+        }
+
+        .content-body p {
+            margin-bottom: 16px;
             text-indent: 1em;
         }
 
+        /* 연속 페이지용 스타일 */
+        .page-a4.continuation .content-header {
+            display: none;
+        }
+
+        .page-a4.continuation .content-body {
+            padding-top: 0;
+        }
+
         /* 꼬리말 */
-        .footer {
-            position: absolute;
-            bottom: 15mm;
-            left: 25mm;
-            right: 25mm;
+        .page-footer {
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
+            padding-top: 6mm;
+            margin-top: auto;
         }
 
         .footer-left {
@@ -397,92 +705,123 @@
         }
 
         .page-number {
-            font-size: 14pt;
+            font-size: 13pt;
             font-weight: 800;
             color: var(--main-green);
-            margin-bottom: 3px;
+            margin-bottom: 2px;
         }
 
         .book-info {
-            font-size: 9pt;
+            font-size: 8pt;
             color: var(--main-green);
             opacity: 0.8;
             font-weight: 500;
         }
 
-        /* 페이지 구분선 */
-        .page-divider {
-            width: 210mm;
+        /* 목차 페이지 스타일 */
+        .toc-page .page-inner {
+            padding-top: 5mm;
+        }
+
+        .toc-title {
+            font-size: 32pt;
+            font-weight: 700;
+            color: var(--main-green);
             text-align: center;
-            color: var(--text-muted);
-            font-size: 12px;
-            padding: 10px 0;
+            margin-bottom: 15mm;
+            padding-bottom: 8mm;
+            border-bottom: 3px solid var(--main-green);
         }
 
-        /* 반응형 */
-        @media (max-width: 1400px) {
-            .edit-panel {
-                width: 380px;
-            }
+        .toc-list {
+            list-style: none;
         }
 
-        @media (max-width: 1200px) {
-            .main-container {
-                flex-direction: column;
-            }
-            .edit-panel {
-                width: 100%;
-                max-height: 50vh;
-            }
-            .preview-panel {
-                padding: 20px;
-            }
-            .page-a4 {
-                transform: scale(0.6);
-                margin: -80mm 0;
-            }
+        .toc-item {
+            display: flex;
+            align-items: baseline;
+            padding: 12px 0;
+            border-bottom: 1px dotted #ccc;
+            font-size: 12pt;
         }
 
-        /* 인쇄 설정 */
-        @media print {
-            body { background: white; }
-            .app-header, .edit-panel, .preview-header, .page-divider { display: none !important; }
-            .preview-panel { padding: 0; background: white; }
-            .page-a4 { 
-                box-shadow: none; 
-                margin: 0;
-                page-break-after: always;
-                transform: none !important;
-            }
+        .toc-num {
+            width: 35px;
+            font-weight: 700;
+            color: var(--main-green);
+            flex-shrink: 0;
         }
 
-        /* 스크롤바 스타일 */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
+        .toc-question {
+            flex: 1;
+            color: #333;
+            line-height: 1.5;
         }
 
-        ::-webkit-scrollbar-track {
-            background: var(--bg-dark);
+        .toc-page-num {
+            width: 40px;
+            text-align: right;
+            font-weight: 600;
+            color: var(--main-green);
+            flex-shrink: 0;
         }
 
-        ::-webkit-scrollbar-thumb {
+        /* 로딩 오버레이 */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .loading-overlay.show {
+            display: flex;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--border-color);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: white;
+            font-size: 16px;
+        }
+
+        .loading-progress {
+            color: var(--accent);
+            font-size: 14px;
+        }
+
+        .progress-bar {
+            width: 300px;
+            height: 6px;
             background: var(--border-color);
-            border-radius: 4px;
+            border-radius: 3px;
+            overflow: hidden;
         }
 
-        ::-webkit-scrollbar-thumb:hover {
-            background: #3d4a6f;
-        }
-
-        /* 애니메이션 */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .page-a4 {
-            animation: fadeIn 0.4s ease;
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--accent);
+            width: 0%;
+            transition: width 0.3s;
         }
 
         /* 토스트 알림 */
@@ -506,6 +845,54 @@
             transform: translateY(0);
             opacity: 1;
         }
+
+        .toast.error {
+            background: var(--danger);
+        }
+
+        /* 스크롤바 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3d4a6f;
+        }
+
+        /* 반응형 */
+        @media (max-width: 1200px) {
+            .main-container {
+                flex-direction: column;
+            }
+            .edit-panel {
+                width: 100%;
+                max-height: 45vh;
+            }
+            .header-actions {
+                gap: 6px;
+            }
+            .btn {
+                padding: 8px 12px;
+                font-size: 11px;
+            }
+        }
+
+        /* 숨겨진 목차 렌더링 영역 */
+        #tocRenderArea {
+            position: absolute;
+            left: -9999px;
+            top: 0;
+        }
     </style>
 </head>
 <body>
@@ -518,20 +905,42 @@
             </div>
         </div>
         <div class="header-actions">
-            <button class="btn btn-secondary" onclick="resetAll()">
-                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                    <path d="M3 3v5h5"/>
+            <button class="btn btn-secondary" onclick="exportJSON()">
+                <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
                 </svg>
-                초기화
+                내보내기
             </button>
-            <button class="btn btn-primary" onclick="generatePDF()">
-                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">
+                <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                     <polyline points="7 10 12 15 17 10"/>
                     <line x1="12" y1="15" x2="12" y2="3"/>
                 </svg>
-                PDF 다운로드
+                불러오기
+            </button>
+            <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(event)">
+            <button class="btn btn-accent" onclick="generateTocPDF()">
+                <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <line x1="8" y1="6" x2="21" y2="6"/>
+                    <line x1="8" y1="12" x2="21" y2="12"/>
+                    <line x1="8" y1="18" x2="21" y2="18"/>
+                    <line x1="3" y1="6" x2="3.01" y2="6"/>
+                    <line x1="3" y1="12" x2="3.01" y2="12"/>
+                    <line x1="3" y1="18" x2="3.01" y2="18"/>
+                </svg>
+                목차 PDF
+            </button>
+            <button class="btn btn-primary" id="downloadBtn" onclick="generatePDF()">
+                <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="12" y1="18" x2="12" y2="12"/>
+                    <line x1="9" y1="15" x2="15" y2="15"/>
+                </svg>
+                전체 PDF
             </button>
         </div>
     </header>
@@ -539,42 +948,61 @@
     <main class="main-container">
         <!-- 왼쪽 편집 패널 -->
         <aside class="edit-panel">
-            <div class="panel-section">
-                <div class="section-title">문서 설정</div>
-                <div class="input-group">
-                    <label>머리말 (좌측)</label>
-                    <input type="text" id="headerLeft" value="보듬교육학원 전자책" oninput="updatePreview()">
-                </div>
-                <div class="input-group">
-                    <label>머리말 (우측)</label>
-                    <input type="text" id="headerRight" value="Q&A 시리즈" oninput="updatePreview()">
-                </div>
-                <div class="input-group">
-                    <label>꼬리말 정보</label>
-                    <input type="text" id="bookInfo" value="보듬교육학원 | 함께 성장하는 배움의 공간" oninput="updatePreview()">
-                </div>
+            <div class="panel-tabs">
+                <button class="panel-tab active" onclick="switchPanelTab('pages')">페이지 목록</button>
+                <button class="panel-tab" onclick="switchPanelTab('edit')">내용 편집</button>
+                <button class="panel-tab" onclick="switchPanelTab('settings')">문서 설정</button>
             </div>
-
-            <div class="panel-section">
-                <div class="section-title">페이지 선택</div>
-                <div class="page-tabs" id="pageTabs">
-                    <button class="page-tab active" onclick="selectPage(1)">1페이지</button>
-                    <button class="page-tab" onclick="selectPage(2)">2페이지</button>
-                    <button class="page-tab" onclick="selectPage(3)">3페이지</button>
-                    <button class="page-tab" onclick="selectPage(4)">4페이지</button>
-                    <button class="page-tab" onclick="selectPage(5)">5페이지</button>
+            
+            <div class="panel-content">
+                <!-- 페이지 목록 탭 -->
+                <div class="panel-section active" id="pagesSection">
+                    <div class="page-list-header">
+                        <div class="page-count">질문 <strong id="questionCountDisplay">0</strong>개 / PDF <strong id="pageCountDisplay">0</strong>페이지</div>
+                        <button class="btn btn-sm btn-secondary" onclick="addPage()">+ 추가</button>
+                    </div>
+                    <div class="page-list" id="pageList">
+                        <!-- 동적 생성 -->
+                    </div>
+                    <button class="add-page-btn" onclick="addPage()">+ 새 질문 추가</button>
                 </div>
-            </div>
 
-            <div class="panel-section">
-                <div class="section-title">페이지 내용</div>
-                <div class="input-group">
-                    <label>질문 (제목)</label>
-                    <input type="text" id="questionInput" placeholder="예: 효과적인 공부 방법은 무엇인가요?" oninput="updateCurrentPage()">
+                <!-- 내용 편집 탭 -->
+                <div class="panel-section" id="editSection">
+                    <div class="section-title">질문 <span id="currentPageNum">1</span> 편집</div>
+                    <div class="input-group">
+                        <label>질문 (제목)</label>
+                        <input type="text" id="questionInput" placeholder="예: 효과적인 공부 방법은 무엇인가요?" oninput="updateCurrentPage()">
+                    </div>
+                    <div class="input-group">
+                        <label>답변 (본문) - 내용이 길면 자동으로 다음 페이지로 넘어갑니다</label>
+                        <textarea id="answerInput" placeholder="답변 내용을 입력하세요.&#10;&#10;문단을 나누려면 빈 줄을 넣으세요.&#10;&#10;내용이 한 페이지를 넘어가면 자동으로 다음 페이지가 생성됩니다." oninput="updateCurrentPage()"></textarea>
+                        <div class="char-count" id="charCount">0자</div>
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <button class="btn btn-secondary btn-sm" onclick="prevPage()" id="prevBtn" style="flex:1">← 이전</button>
+                        <button class="btn btn-secondary btn-sm" onclick="nextPage()" id="nextBtn" style="flex:1">다음 →</button>
+                    </div>
                 </div>
-                <div class="input-group">
-                    <label>답변 (본문)</label>
-                    <textarea id="answerInput" placeholder="답변 내용을 입력하세요. 문단 구분은 엔터 두 번으로 합니다." oninput="updateCurrentPage()"></textarea>
+
+                <!-- 문서 설정 탭 -->
+                <div class="panel-section" id="settingsSection">
+                    <div class="section-title">머리말/꼬리말 설정</div>
+                    <div class="input-group">
+                        <label>머리말 (좌측)</label>
+                        <input type="text" id="headerLeft" value="보듬교육학원 전자책" oninput="updatePreview()">
+                    </div>
+                    <div class="input-group">
+                        <label>머리말 (우측)</label>
+                        <input type="text" id="headerRight" value="Q&A 시리즈" oninput="updatePreview()">
+                    </div>
+                    <div class="input-group">
+                        <label>꼬리말 정보</label>
+                        <input type="text" id="bookInfo" value="보듬교육학원 | 함께 성장하는 배움의 공간" oninput="updatePreview()">
+                    </div>
+                    
+                    <div class="section-title" style="margin-top: 25px;">데이터 관리</div>
+                    <button class="btn btn-danger btn-sm" onclick="resetAll()" style="width: 100%;">전체 초기화</button>
                 </div>
             </div>
         </aside>
@@ -583,12 +1011,18 @@
         <section class="preview-panel">
             <div class="preview-header">
                 <div class="preview-title">
-                    미리보기 <span>| 총 <span id="totalPages">5</span>페이지</span>
+                    미리보기 <span>| 총 <span id="totalPages">0</span>페이지</span>
                 </div>
-                <div class="zoom-controls">
-                    <button class="zoom-btn" onclick="zoomOut()">−</button>
-                    <span class="zoom-level" id="zoomLevel">70%</span>
-                    <button class="zoom-btn" onclick="zoomIn()">+</button>
+                <div class="preview-controls">
+                    <div class="view-toggle">
+                        <button class="view-toggle-btn active" onclick="setViewMode('list')">목록</button>
+                        <button class="view-toggle-btn" onclick="setViewMode('grid')">그리드</button>
+                    </div>
+                    <div class="zoom-controls">
+                        <button class="zoom-btn" onclick="zoomOut()">−</button>
+                        <span class="zoom-level" id="zoomLevel">50%</span>
+                        <button class="zoom-btn" onclick="zoomIn()">+</button>
+                    </div>
                 </div>
             </div>
 
@@ -598,230 +1032,765 @@
         </section>
     </main>
 
-    <div class="toast" id="toast">PDF 다운로드 준비 중...</div>
+    <!-- 목차 렌더링용 숨겨진 영역 -->
+    <div id="tocRenderArea"></div>
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text" id="loadingText">PDF를 생성하고 있습니다...</div>
+        <div class="loading-progress" id="loadingProgress">준비 중...</div>
+        <div class="progress-bar">
+            <div class="progress-bar-fill" id="progressBarFill"></div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
 
     <script>
-        // 페이지 데이터 초기화
-        let pageData = [
+        // 전역 상태
+        let pageData = [];
+        let currentPage = 1;
+        let zoomScale = 0.5;
+        let viewMode = 'list';
+        let settings = {
+            headerLeft: "보듬교육학원 전자책",
+            headerRight: "Q&A 시리즈",
+            bookInfo: "보듬교육학원 | 함께 성장하는 배움의 공간"
+        };
+
+        // 페이지당 최대 글자 수 (대략적인 기준)
+        const CHARS_PER_PAGE_FIRST = 450;  // 첫 페이지 (헤더 있음)
+        const CHARS_PER_PAGE_CONT = 650;   // 연속 페이지 (헤더 없음)
+
+        // 초기 데이터
+        const defaultPages = [
             {
                 question: "효과적인 학습 전략이란 무엇인가요?",
-                answer: "효과적인 학습 전략의 핵심은 단순한 반복이 아닌 '능동적 회상(Active Recall)'과 '간격 반복(Spaced Repetition)'입니다. 연구에 따르면, 단순히 교재를 반복해서 읽는 것보다 스스로 내용을 떠올려보는 연습이 기억 정착에 훨씬 효과적입니다.\n\n첫째, 학습 후 24시간 이내에 복습하는 것이 중요합니다. 에빙하우스의 망각 곡선에 따르면, 학습 직후 급격히 망각이 진행되므로 초기 복습이 핵심입니다.\n\n둘째, 문제 풀이와 자기 설명을 병행하세요. 배운 내용을 자신의 말로 설명할 수 있다면 진정으로 이해한 것입니다.\n\n셋째, 학습 환경을 다양화하세요. 같은 장소에서만 공부하면 해당 환경에 종속된 기억이 형성될 수 있습니다."
+                answer: `효과적인 학습 전략의 핵심은 단순한 반복이 아닌 '능동적 회상(Active Recall)'과 '간격 반복(Spaced Repetition)'입니다. 연구에 따르면, 단순히 교재를 반복해서 읽는 것보다 스스로 내용을 떠올려보는 연습이 기억 정착에 훨씬 효과적입니다.
+
+첫째, 학습 후 24시간 이내에 복습하는 것이 중요합니다. 에빙하우스의 망각 곡선에 따르면, 학습 직후 급격히 망각이 진행되므로 초기 복습이 핵심입니다.
+
+둘째, 문제 풀이와 자기 설명을 병행하세요. 배운 내용을 자신의 말로 설명할 수 있다면 진정으로 이해한 것입니다.
+
+셋째, 학습 환경을 다양화하세요. 같은 장소에서만 공부하면 해당 환경에 종속된 기억이 형성될 수 있습니다.`
             },
             {
                 question: "시험 불안을 극복하는 방법은?",
-                answer: "시험 불안은 대부분의 학생들이 경험하는 자연스러운 현상입니다. 적절한 긴장감은 오히려 집중력을 높여주지만, 과도한 불안은 실력 발휘를 방해합니다.\n\n먼저, 충분한 준비가 불안 감소의 가장 확실한 방법입니다. 모의고사나 기출문제를 실전처럼 풀어보면 실제 시험 상황에 대한 두려움이 줄어듭니다.\n\n호흡 조절 기법도 효과적입니다. 4-7-8 호흡법(4초 들이쉬고, 7초 참고, 8초 내쉬기)은 즉각적으로 긴장을 완화시켜 줍니다.\n\n부정적인 자기 대화를 긍정적으로 바꾸는 것도 중요합니다. '망하면 어떡하지'가 아닌 '할 수 있는 만큼 최선을 다하자'로 생각을 전환하세요."
+                answer: `시험 불안은 대부분의 학생들이 경험하는 자연스러운 현상입니다. 적절한 긴장감은 오히려 집중력을 높여주지만, 과도한 불안은 실력 발휘를 방해합니다.
+
+먼저, 충분한 준비가 불안 감소의 가장 확실한 방법입니다. 모의고사나 기출문제를 실전처럼 풀어보면 실제 시험 상황에 대한 두려움이 줄어듭니다.
+
+호흡 조절 기법도 효과적입니다. 4-7-8 호흡법(4초 들이쉬고, 7초 참고, 8초 내쉬기)은 즉각적으로 긴장을 완화시켜 줍니다.
+
+부정적인 자기 대화를 긍정적으로 바꾸는 것도 중요합니다. '망하면 어떡하지'가 아닌 '할 수 있는 만큼 최선을 다하자'로 생각을 전환하세요.`
             },
             {
                 question: "집중력을 높이려면 어떻게 해야 하나요?",
-                answer: "집중력은 타고나는 것이 아니라 훈련으로 향상시킬 수 있습니다. 현대인의 평균 집중 시간이 점점 짧아지고 있지만, 올바른 방법으로 이를 극복할 수 있습니다.\n\n포모도로 기법을 활용해보세요. 25분 집중 후 5분 휴식의 사이클을 반복하면 지속적인 집중이 가능합니다. 4사이클 후에는 15-30분의 긴 휴식을 취합니다.\n\n디지털 디톡스도 필수입니다. 공부할 때는 스마트폰을 다른 방에 두거나 비행기 모드로 설정하세요. 알림 하나에 끊긴 집중을 회복하는 데 평균 23분이 걸린다는 연구 결과가 있습니다.\n\n수면과 운동의 중요성도 잊지 마세요. 7-8시간의 충분한 수면과 규칙적인 유산소 운동은 뇌 기능을 최적화합니다."
+                answer: `집중력은 타고나는 것이 아니라 훈련으로 향상시킬 수 있습니다. 현대인의 평균 집중 시간이 점점 짧아지고 있지만, 올바른 방법으로 이를 극복할 수 있습니다.
+
+포모도로 기법을 활용해보세요. 25분 집중 후 5분 휴식의 사이클을 반복하면 지속적인 집중이 가능합니다. 4사이클 후에는 15-30분의 긴 휴식을 취합니다.
+
+디지털 디톡스도 필수입니다. 공부할 때는 스마트폰을 다른 방에 두거나 비행기 모드로 설정하세요.
+
+수면과 운동의 중요성도 잊지 마세요. 7-8시간의 충분한 수면과 규칙적인 유산소 운동은 뇌 기능을 최적화합니다.`
             },
             {
                 question: "암기력을 향상시키는 비법이 있나요?",
-                answer: "암기력은 단순한 반복보다 '의미 있는 연결'을 통해 향상됩니다. 뇌는 고립된 정보보다 서로 연결된 정보를 훨씬 잘 기억합니다.\n\n기억의 궁전(Memory Palace) 기법은 가장 강력한 암기 방법 중 하나입니다. 익숙한 장소를 떠올리며 암기할 내용을 각 위치에 배치하는 상상을 합니다. 시각적 이미지와 공간 기억을 활용하기 때문에 효과가 뛰어납니다.\n\n스토리텔링도 효과적입니다. 외워야 할 항목들을 하나의 이야기로 엮으면 기억에 오래 남습니다. 황당하고 재미있을수록 더 잘 기억됩니다.\n\n청크(Chunk) 만들기도 유용합니다. 긴 전화번호를 세 덩어리로 나누어 외우듯이, 많은 정보를 의미 있는 묶음으로 그룹화하면 작업 기억의 한계를 극복할 수 있습니다."
+                answer: `암기력은 단순한 반복보다 '의미 있는 연결'을 통해 향상됩니다. 뇌는 고립된 정보보다 서로 연결된 정보를 훨씬 잘 기억합니다.
+
+기억의 궁전(Memory Palace) 기법은 가장 강력한 암기 방법 중 하나입니다. 익숙한 장소를 떠올리며 암기할 내용을 각 위치에 배치하는 상상을 합니다.
+
+스토리텔링도 효과적입니다. 외워야 할 항목들을 하나의 이야기로 엮으면 기억에 오래 남습니다. 황당하고 재미있을수록 더 잘 기억됩니다.
+
+청크(Chunk) 만들기도 유용합니다. 많은 정보를 의미 있는 묶음으로 그룹화하면 작업 기억의 한계를 극복할 수 있습니다.`
             },
             {
                 question: "공부 의욕이 없을 때는 어떻게 해야 하나요?",
-                answer: "동기 부여의 저하는 누구에게나 찾아오는 자연스러운 현상입니다. 중요한 것은 이 시기를 어떻게 관리하느냐입니다.\n\n'2분 규칙'을 적용해보세요. 의욕이 없을 때도 딱 2분만 시작해보는 것입니다. 대부분의 경우, 시작하고 나면 계속하게 됩니다. 시작이 반입니다.\n\n목표를 작은 단위로 쪼개세요. '오늘 50페이지 읽기'보다 '10페이지씩 5번 읽기'가 심리적 부담이 적습니다. 작은 성취감이 쌓이면 큰 동기가 됩니다.\n\n환경을 바꾸는 것도 도움이 됩니다. 도서관, 카페, 스터디 카페 등 장소를 바꾸면 새로운 자극이 생깁니다.\n\n마지막으로, 자신만의 보상 시스템을 만드세요. 목표 달성 후 좋아하는 간식이나 여가 활동으로 자신을 격려하면 학습에 긍정적인 연관을 형성할 수 있습니다."
+                answer: `동기 부여의 저하는 누구에게나 찾아오는 자연스러운 현상입니다. 중요한 것은 이 시기를 어떻게 관리하느냐입니다.
+
+'2분 규칙'을 적용해보세요. 의욕이 없을 때도 딱 2분만 시작해보는 것입니다. 대부분의 경우, 시작하고 나면 계속하게 됩니다.
+
+목표를 작은 단위로 쪼개세요. '오늘 50페이지 읽기'보다 '10페이지씩 5번 읽기'가 심리적 부담이 적습니다.
+
+환경을 바꾸는 것도 도움이 됩니다. 도서관, 카페, 스터디 카페 등 장소를 바꾸면 새로운 자극이 생깁니다.
+
+마지막으로, 자신만의 보상 시스템을 만드세요. 목표 달성 후 좋아하는 간식이나 여가 활동으로 자신을 격려하세요.`
             }
         ];
 
-        let currentPage = 1;
-        let zoomScale = 0.7;
-        let headerLeft = "보듬교육학원 전자책";
-        let headerRight = "Q&A 시리즈";
-        let bookInfo = "보듬교육학원 | 함께 성장하는 배움의 공간";
-
         // 초기화
         document.addEventListener('DOMContentLoaded', function() {
+            const saved = localStorage.getItem('ebookData');
+            if (saved) {
+                const data = JSON.parse(saved);
+                pageData = data.pages || defaultPages;
+                settings = data.settings || settings;
+                document.getElementById('headerLeft').value = settings.headerLeft;
+                document.getElementById('headerRight').value = settings.headerRight;
+                document.getElementById('bookInfo').value = settings.bookInfo;
+            } else {
+                pageData = [...defaultPages];
+            }
+            
+            updatePageList();
             updatePreview();
-            loadPageToEditor(1);
+            selectPage(1);
         });
+
+        // 자동 저장
+        function saveToLocalStorage() {
+            localStorage.setItem('ebookData', JSON.stringify({
+                pages: pageData,
+                settings: settings
+            }));
+        }
+
+        // 패널 탭 전환
+        function switchPanelTab(tab) {
+            document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.panel-section').forEach(s => s.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tab + 'Section').classList.add('active');
+        }
+
+        // 내용을 페이지별로 분할하는 함수
+        function splitContentIntoPages(question, answer, questionIndex) {
+            const pages = [];
+            const paragraphs = (answer || '').split(/\n\s*\n/).filter(p => p.trim());
+            
+            if (paragraphs.length === 0) {
+                pages.push({
+                    questionIndex: questionIndex,
+                    question: question,
+                    content: '',
+                    isFirst: true,
+                    isContinuation: false
+                });
+                return pages;
+            }
+
+            let currentContent = '';
+            let currentCharCount = 0;
+            let isFirstPage = true;
+            const maxChars = () => isFirstPage ? CHARS_PER_PAGE_FIRST : CHARS_PER_PAGE_CONT;
+
+            for (let i = 0; i < paragraphs.length; i++) {
+                const para = paragraphs[i];
+                const paraLength = para.length;
+
+                if (currentCharCount + paraLength > maxChars() && currentContent) {
+                    // 현재 페이지 저장
+                    pages.push({
+                        questionIndex: questionIndex,
+                        question: question,
+                        content: currentContent.trim(),
+                        isFirst: isFirstPage,
+                        isContinuation: !isFirstPage
+                    });
+                    
+                    currentContent = '';
+                    currentCharCount = 0;
+                    isFirstPage = false;
+                }
+
+                currentContent += `<p>${para.replace(/\n/g, ' ')}</p>`;
+                currentCharCount += paraLength;
+            }
+
+            // 마지막 페이지
+            if (currentContent) {
+                pages.push({
+                    questionIndex: questionIndex,
+                    question: question,
+                    content: currentContent.trim(),
+                    isFirst: isFirstPage,
+                    isContinuation: !isFirstPage
+                });
+            }
+
+            return pages;
+        }
+
+        // 모든 렌더링 페이지 생성
+        function generateAllPages() {
+            const allPages = [];
+            let pdfPageNum = 1;
+
+            pageData.forEach((item, qIndex) => {
+                const questionPages = splitContentIntoPages(item.question, item.answer, qIndex);
+                questionPages.forEach((page, pageIndex) => {
+                    allPages.push({
+                        ...page,
+                        pdfPageNum: pdfPageNum,
+                        questionNum: qIndex + 1,
+                        subPage: pageIndex + 1,
+                        totalSubPages: questionPages.length
+                    });
+                    pdfPageNum++;
+                });
+            });
+
+            return allPages;
+        }
+
+        // 페이지 목록 업데이트
+        function updatePageList() {
+            const list = document.getElementById('pageList');
+            list.innerHTML = '';
+            
+            const allPages = generateAllPages();
+            const questionStartPages = {};
+            
+            allPages.forEach(p => {
+                if (p.isFirst) {
+                    questionStartPages[p.questionIndex] = p.pdfPageNum;
+                }
+            });
+
+            pageData.forEach((page, index) => {
+                const pagesForQuestion = allPages.filter(p => p.questionIndex === index);
+                const pageCount = pagesForQuestion.length;
+                
+                const item = document.createElement('div');
+                item.className = `page-item ${index + 1 === currentPage ? 'active' : ''}`;
+                item.draggable = true;
+                item.dataset.index = index;
+                
+                item.innerHTML = `
+                    <div class="page-item-num">${index + 1}</div>
+                    <div class="page-item-content">
+                        <div class="page-item-title">
+                            ${page.question || '(제목 없음)'}
+                            ${pageCount > 1 ? `<span class="page-item-badge">${pageCount}p</span>` : ''}
+                        </div>
+                        <div class="page-item-preview">${(page.answer || '').substring(0, 35)}...</div>
+                    </div>
+                    <div class="page-item-actions">
+                        <button class="page-item-btn drag-handle" title="순서 변경">⋮⋮</button>
+                        <button class="page-item-btn" onclick="deletePage(${index}); event.stopPropagation();" title="삭제">✕</button>
+                    </div>
+                `;
+                
+                item.addEventListener('click', () => selectPage(index + 1));
+                
+                item.addEventListener('dragstart', handleDragStart);
+                item.addEventListener('dragover', handleDragOver);
+                item.addEventListener('drop', handleDrop);
+                item.addEventListener('dragend', handleDragEnd);
+                
+                list.appendChild(item);
+            });
+            
+            document.getElementById('questionCountDisplay').textContent = pageData.length;
+            document.getElementById('pageCountDisplay').textContent = allPages.length;
+            document.getElementById('totalPages').textContent = allPages.length;
+        }
+
+        // 드래그 앤 드롭
+        let draggedItem = null;
+
+        function handleDragStart(e) {
+            draggedItem = this;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            if (draggedItem !== this) {
+                const fromIndex = parseInt(draggedItem.dataset.index);
+                const toIndex = parseInt(this.dataset.index);
+                
+                const [removed] = pageData.splice(fromIndex, 1);
+                pageData.splice(toIndex, 0, removed);
+                
+                if (currentPage === fromIndex + 1) {
+                    currentPage = toIndex + 1;
+                }
+                
+                updatePageList();
+                updatePreview();
+                saveToLocalStorage();
+            }
+        }
+
+        function handleDragEnd() {
+            this.classList.remove('dragging');
+            draggedItem = null;
+        }
+
+        // 페이지 추가
+        function addPage() {
+            pageData.push({ question: '', answer: '' });
+            updatePageList();
+            updatePreview();
+            selectPage(pageData.length);
+            switchPanelTab('edit');
+            document.querySelectorAll('.panel-tab').forEach((t, i) => {
+                t.classList.toggle('active', i === 1);
+            });
+            document.querySelectorAll('.panel-section').forEach((s, i) => {
+                s.classList.toggle('active', i === 1);
+            });
+            saveToLocalStorage();
+            showToast('새 질문이 추가되었습니다.');
+        }
+
+        // 페이지 삭제
+        function deletePage(index) {
+            if (pageData.length <= 1) {
+                showToast('최소 1개의 질문은 필요합니다.', true);
+                return;
+            }
+            
+            if (confirm(`질문 ${index + 1}을(를) 삭제하시겠습니까?`)) {
+                pageData.splice(index, 1);
+                if (currentPage > pageData.length) {
+                    currentPage = pageData.length;
+                }
+                updatePageList();
+                updatePreview();
+                loadPageToEditor(currentPage);
+                saveToLocalStorage();
+                showToast('질문이 삭제되었습니다.');
+            }
+        }
 
         // 페이지 선택
         function selectPage(pageNum) {
             currentPage = pageNum;
-            
-            // 탭 활성화 상태 업데이트
-            document.querySelectorAll('.page-tab').forEach((tab, index) => {
-                tab.classList.toggle('active', index + 1 === pageNum);
-            });
-            
+            updatePageList();
             loadPageToEditor(pageNum);
+            document.getElementById('currentPageNum').textContent = pageNum;
+            document.getElementById('prevBtn').disabled = pageNum <= 1;
+            document.getElementById('nextBtn').disabled = pageNum >= pageData.length;
         }
 
-        // 에디터에 페이지 내용 로드
+        function prevPage() {
+            if (currentPage > 1) selectPage(currentPage - 1);
+        }
+
+        function nextPage() {
+            if (currentPage < pageData.length) selectPage(currentPage + 1);
+        }
+
         function loadPageToEditor(pageNum) {
             const data = pageData[pageNum - 1];
-            document.getElementById('questionInput').value = data.question;
-            document.getElementById('answerInput').value = data.answer;
+            if (data) {
+                document.getElementById('questionInput').value = data.question || '';
+                document.getElementById('answerInput').value = data.answer || '';
+                updateCharCount();
+            }
         }
 
-        // 현재 페이지 업데이트
+        function updateCharCount() {
+            const answer = document.getElementById('answerInput').value;
+            const count = answer.length;
+            const charCountEl = document.getElementById('charCount');
+            charCountEl.textContent = `${count}자`;
+            
+            if (count > CHARS_PER_PAGE_FIRST * 2) {
+                charCountEl.className = 'char-count overflow';
+            } else if (count > CHARS_PER_PAGE_FIRST) {
+                charCountEl.className = 'char-count warning';
+            } else {
+                charCountEl.className = 'char-count';
+            }
+        }
+
         function updateCurrentPage() {
             pageData[currentPage - 1] = {
                 question: document.getElementById('questionInput').value,
                 answer: document.getElementById('answerInput').value
             };
+            updateCharCount();
+            updatePageList();
             updatePreview();
+            saveToLocalStorage();
         }
 
         // 미리보기 업데이트
         function updatePreview() {
-            headerLeft = document.getElementById('headerLeft').value;
-            headerRight = document.getElementById('headerRight').value;
-            bookInfo = document.getElementById('bookInfo').value;
+            settings.headerLeft = document.getElementById('headerLeft').value;
+            settings.headerRight = document.getElementById('headerRight').value;
+            settings.bookInfo = document.getElementById('bookInfo').value;
 
             const container = document.getElementById('pdfPreview');
             container.innerHTML = '';
 
-            pageData.forEach((data, index) => {
-                if (index > 0) {
-                    const divider = document.createElement('div');
-                    divider.className = 'page-divider';
-                    divider.textContent = `― ${index + 1}페이지 ―`;
-                    container.appendChild(divider);
-                }
+            const allPages = generateAllPages();
 
-                const pageElement = createPageElement(data, index + 1);
+            allPages.forEach((pageInfo) => {
+                const pageElement = createPageElement(pageInfo);
                 container.appendChild(pageElement);
             });
 
+            document.getElementById('totalPages').textContent = allPages.length;
             updateZoom();
         }
 
         // 페이지 요소 생성
-        function createPageElement(data, pageNum) {
-            const page = document.createElement('div');
-            page.className = 'page-a4';
-            page.id = `page-${pageNum}`;
+        function createPageElement(pageInfo) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'page-wrapper';
+            
+            const label = document.createElement('div');
+            label.className = 'page-label';
+            label.innerHTML = `${pageInfo.pdfPageNum}페이지 (Q${pageInfo.questionNum})`;
+            if (pageInfo.isContinuation) {
+                label.innerHTML += `<span class="cont-badge">계속</span>`;
+            }
+            wrapper.appendChild(label);
 
-            // 본문 내용을 문단으로 분리
-            const paragraphs = data.answer.split('\n\n').filter(p => p.trim());
-            const contentHtml = paragraphs.map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('');
+            const page = document.createElement('div');
+            page.className = `page-a4 ${pageInfo.isContinuation ? 'continuation' : ''}`;
+            page.id = `page-${pageInfo.pdfPageNum}`;
 
             page.innerHTML = `
-                <div class="page-header-bar">
-                    <div class="header-left">${headerLeft}</div>
-                    <div class="header-right">${headerRight}</div>
+                <div class="page-inner">
+                    <div class="page-header-bar">
+                        <div class="header-left">${settings.headerLeft}</div>
+                        <div class="header-right">${settings.headerRight}</div>
+                    </div>
+                    
+                    ${!pageInfo.isContinuation ? `
+                    <div class="content-header">
+                        <div class="chapter-num">${pageInfo.questionNum}.</div>
+                        <div class="title-section">
+                            <div class="title-line"></div>
+                            <h1 class="chapter-title">${pageInfo.question || ''}</h1>
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    <div class="content-body">
+                        ${pageInfo.content}
+                    </div>
+
+                    <div class="page-footer">
+                        <div class="footer-left">${settings.bookInfo}</div>
+                        <div class="footer-right">
+                            <div class="page-number">${pageInfo.pdfPageNum}</div>
+                            <div class="book-info">보듬교육학원</div>
+                        </div>
+                    </div>
                 </div>
-                
-                <header class="header">
-                    <div class="chapter-num">${pageNum}.</div>
-                    <div class="title-section">
-                        <div class="line"></div>
-                        <h1 class="chapter-title">${data.question}</h1>
-                    </div>
-                </header>
+            `;
 
-                <article class="content">
-                    ${contentHtml}
-                </article>
+            wrapper.appendChild(page);
+            return wrapper;
+        }
 
-                <footer class="footer">
-                    <div class="footer-left">${bookInfo}</div>
-                    <div class="footer-right">
-                        <div class="page-number">${pageNum}</div>
-                        <div class="book-info">보듬교육학원</div>
+        // 목차 페이지 생성
+        function createTocPages() {
+            const allPages = generateAllPages();
+            const tocItems = [];
+            
+            pageData.forEach((item, index) => {
+                const firstPage = allPages.find(p => p.questionIndex === index && p.isFirst);
+                tocItems.push({
+                    num: index + 1,
+                    question: item.question || '(제목 없음)',
+                    pageNum: firstPage ? firstPage.pdfPageNum : 1
+                });
+            });
+
+            // 목차를 페이지당 15개씩 분할
+            const ITEMS_PER_TOC_PAGE = 15;
+            const tocPages = [];
+            
+            for (let i = 0; i < tocItems.length; i += ITEMS_PER_TOC_PAGE) {
+                const pageItems = tocItems.slice(i, i + ITEMS_PER_TOC_PAGE);
+                tocPages.push(pageItems);
+            }
+
+            return tocPages;
+        }
+
+        // 목차 페이지 요소 생성
+        function createTocPageElement(items, tocPageNum, totalTocPages) {
+            const page = document.createElement('div');
+            page.className = 'page-a4 toc-page';
+
+            let itemsHtml = items.map(item => `
+                <li class="toc-item">
+                    <span class="toc-num">${item.num}.</span>
+                    <span class="toc-question">${item.question}</span>
+                    <span class="toc-page-num">${item.pageNum}</span>
+                </li>
+            `).join('');
+
+            page.innerHTML = `
+                <div class="page-inner">
+                    <div class="page-header-bar">
+                        <div class="header-left">${settings.headerLeft}</div>
+                        <div class="header-right">${settings.headerRight}</div>
                     </div>
-                </footer>
+                    
+                    <div class="toc-title">목 차</div>
+                    
+                    <ul class="toc-list">
+                        ${itemsHtml}
+                    </ul>
+
+                    <div class="page-footer">
+                        <div class="footer-left">${settings.bookInfo}</div>
+                        <div class="footer-right">
+                            <div class="page-number">${tocPageNum}</div>
+                            <div class="book-info">보듬교육학원</div>
+                        </div>
+                    </div>
+                </div>
             `;
 
             return page;
         }
 
-        // 줌 컨트롤
+        // 뷰 모드
+        function setViewMode(mode) {
+            viewMode = mode;
+            document.querySelectorAll('.view-toggle-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.textContent === (mode === 'list' ? '목록' : '그리드'));
+            });
+            document.getElementById('pdfPreview').classList.toggle('grid-view', mode === 'grid');
+            updateZoom();
+        }
+
+        // 줌
         function zoomIn() {
-            if (zoomScale < 1.2) {
+            if (zoomScale < 1.0) {
                 zoomScale += 0.1;
                 updateZoom();
             }
         }
 
         function zoomOut() {
-            if (zoomScale > 0.3) {
+            if (zoomScale > 0.2) {
                 zoomScale -= 0.1;
                 updateZoom();
             }
         }
 
         function updateZoom() {
+            if (viewMode === 'grid') return;
+            
             document.querySelectorAll('.page-a4').forEach(page => {
                 page.style.transform = `scale(${zoomScale})`;
-                page.style.marginBottom = `${-297 * (1 - zoomScale)}mm`;
             });
+            
+            document.querySelectorAll('.page-wrapper').forEach(wrapper => {
+                wrapper.style.height = `calc(297mm * ${zoomScale})`;
+                wrapper.style.width = `calc(210mm * ${zoomScale})`;
+            });
+            
             document.getElementById('zoomLevel').textContent = `${Math.round(zoomScale * 100)}%`;
         }
 
         // 초기화
         function resetAll() {
-            if (confirm('모든 내용을 초기화하시겠습니까?')) {
-                pageData = pageData.map((_, i) => ({
-                    question: '',
-                    answer: ''
-                }));
-                document.getElementById('headerLeft').value = '보듬교육학원 전자책';
-                document.getElementById('headerRight').value = 'Q&A 시리즈';
-                document.getElementById('bookInfo').value = '보듬교육학원 | 함께 성장하는 배움의 공간';
-                selectPage(1);
+            if (confirm('모든 내용을 초기화하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) {
+                pageData = [...defaultPages];
+                settings = {
+                    headerLeft: "보듬교육학원 전자책",
+                    headerRight: "Q&A 시리즈",
+                    bookInfo: "보듬교육학원 | 함께 성장하는 배움의 공간"
+                };
+                document.getElementById('headerLeft').value = settings.headerLeft;
+                document.getElementById('headerRight').value = settings.headerRight;
+                document.getElementById('bookInfo').value = settings.bookInfo;
+                currentPage = 1;
+                updatePageList();
                 updatePreview();
+                loadPageToEditor(1);
+                localStorage.removeItem('ebookData');
+                showToast('초기화되었습니다.');
             }
         }
 
-        // PDF 생성
-        async function generatePDF() {
-            showToast('PDF 생성 중...');
-
-            const element = document.getElementById('pdfPreview');
-            const pages = element.querySelectorAll('.page-a4');
-            
-            // 줌 리셋
-            pages.forEach(page => {
-                page.style.transform = 'none';
-                page.style.marginBottom = '0';
-            });
-
-            // 페이지 구분선 숨기기
-            const dividers = element.querySelectorAll('.page-divider');
-            dividers.forEach(d => d.style.display = 'none');
-
-            const opt = {
-                margin: 0,
-                filename: '보듬교육학원_전자책.pdf',
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { 
-                    scale: 2,
-                    useCORS: true,
-                    letterRendering: true
-                },
-                jsPDF: { 
-                    unit: 'mm', 
-                    format: 'a4', 
-                    orientation: 'portrait' 
-                },
-                pagebreak: { mode: ['css', 'legacy'], before: '.page-a4' }
+        // JSON 내보내기/불러오기
+        function exportJSON() {
+            const data = {
+                pages: pageData,
+                settings: settings,
+                exportDate: new Date().toISOString()
             };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `보듬교육학원_전자책_${new Date().toLocaleDateString('ko-KR').replace(/\./g, '')}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('데이터가 내보내기 되었습니다.');
+        }
 
+        function importJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.pages && Array.isArray(data.pages)) {
+                        pageData = data.pages;
+                        if (data.settings) {
+                            settings = data.settings;
+                            document.getElementById('headerLeft').value = settings.headerLeft;
+                            document.getElementById('headerRight').value = settings.headerRight;
+                            document.getElementById('bookInfo').value = settings.bookInfo;
+                        }
+                        currentPage = 1;
+                        updatePageList();
+                        updatePreview();
+                        loadPageToEditor(1);
+                        saveToLocalStorage();
+                        showToast(`${pageData.length}개 질문을 불러왔습니다.`);
+                    } else {
+                        showToast('올바르지 않은 파일 형식입니다.', true);
+                    }
+                } catch (err) {
+                    showToast('파일을 읽는 중 오류가 발생했습니다.', true);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        // 목차 PDF 생성
+        async function generateTocPDF() {
+            const btn = document.querySelector('.btn-accent');
+            const overlay = document.getElementById('loadingOverlay');
+            const loadingText = document.getElementById('loadingText');
+            const progress = document.getElementById('loadingProgress');
+            const progressBar = document.getElementById('progressBarFill');
+            
+            btn.disabled = true;
+            overlay.classList.add('show');
+            loadingText.textContent = '목차 PDF를 생성하고 있습니다...';
+            
             try {
-                await html2pdf().set(opt).from(element).save();
-                showToast('PDF 다운로드 완료!');
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'mm',
+                    format: 'a4'
+                });
+
+                const tocPages = createTocPages();
+                const tocArea = document.getElementById('tocRenderArea');
+                tocArea.innerHTML = '';
+
+                for (let i = 0; i < tocPages.length; i++) {
+                    progress.textContent = `목차 페이지 ${i + 1}/${tocPages.length} 처리 중...`;
+                    progressBar.style.width = `${((i + 1) / tocPages.length) * 100}%`;
+
+                    const tocPageEl = createTocPageElement(tocPages[i], i + 1, tocPages.length);
+                    tocArea.appendChild(tocPageEl);
+
+                    await new Promise(r => setTimeout(r, 100));
+
+                    const canvas = await html2canvas(tocPageEl, {
+                        scale: 2,
+                        useCORS: true,
+                        logging: false,
+                        backgroundColor: '#ffffff'
+                    });
+
+                    if (i > 0) pdf.addPage();
+                    pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 210, 297);
+                    
+                    tocArea.innerHTML = '';
+                }
+
+                progress.textContent = 'PDF 저장 중...';
+                pdf.save('보듬교육학원_목차.pdf');
+                showToast(`목차 PDF 다운로드 완료! (${tocPages.length}페이지)`);
+            } catch (error) {
+                console.error('목차 PDF 생성 오류:', error);
+                showToast('목차 PDF 생성 중 오류가 발생했습니다.', true);
+            } finally {
+                btn.disabled = false;
+                overlay.classList.remove('show');
+                progressBar.style.width = '0%';
+            }
+        }
+
+        // 전체 PDF 생성
+        async function generatePDF() {
+            const btn = document.getElementById('downloadBtn');
+            const overlay = document.getElementById('loadingOverlay');
+            const loadingText = document.getElementById('loadingText');
+            const progress = document.getElementById('loadingProgress');
+            const progressBar = document.getElementById('progressBarFill');
+            
+            btn.disabled = true;
+            overlay.classList.add('show');
+            loadingText.textContent = '전체 PDF를 생성하고 있습니다...';
+            
+            try {
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'mm',
+                    format: 'a4'
+                });
+
+                const pages = document.querySelectorAll('#pdfPreview .page-a4');
+                const total = pages.length;
+                
+                for (let i = 0; i < total; i++) {
+                    const percent = Math.round(((i + 1) / total) * 100);
+                    progress.textContent = `페이지 ${i + 1}/${total} 처리 중... (${percent}%)`;
+                    progressBar.style.width = `${percent}%`;
+                    
+                    const page = pages[i];
+                    const originalTransform = page.style.transform;
+                    page.style.transform = 'none';
+                    
+                    await new Promise(r => setTimeout(r, 50));
+                    
+                    const canvas = await html2canvas(page, {
+                        scale: 2,
+                        useCORS: true,
+                        logging: false,
+                        backgroundColor: '#ffffff',
+                        width: page.offsetWidth,
+                        height: page.offsetHeight
+                    });
+                    
+                    page.style.transform = originalTransform;
+                    
+                    if (i > 0) pdf.addPage();
+                    pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 210, 297);
+                }
+
+                progress.textContent = 'PDF 저장 중...';
+                pdf.save('보듬교육학원_전자책.pdf');
+                showToast(`전체 PDF 다운로드 완료! (${total}페이지)`);
             } catch (error) {
                 console.error('PDF 생성 오류:', error);
-                showToast('PDF 생성 중 오류가 발생했습니다.');
+                showToast('PDF 생성 중 오류가 발생했습니다.', true);
+            } finally {
+                btn.disabled = false;
+                overlay.classList.remove('show');
+                progressBar.style.width = '0%';
             }
-
-            // 원래 상태로 복원
-            dividers.forEach(d => d.style.display = '');
-            updateZoom();
         }
 
-        // 토스트 알림
-        function showToast(message) {
+        // 토스트
+        function showToast(message, isError = false) {
             const toast = document.getElementById('toast');
             toast.textContent = message;
+            toast.classList.toggle('error', isError);
             toast.classList.add('show');
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 3000);
+            setTimeout(() => toast.classList.remove('show'), 3000);
         }
     </script>
 </body>
