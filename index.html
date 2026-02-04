@@ -1190,12 +1190,12 @@
             document.getElementById(tab + 'Section').classList.add('active');
         }
 
-        // 내용을 페이지별로 분할하는 함수
+        // 내용을 페이지별로 분할하는 함수 (글자 수 기반)
         function splitContentIntoPages(question, answer, questionIndex, teacher, school) {
             const pages = [];
-            const paragraphs = (answer || '').split(/\n\s*\n/).filter(p => p.trim());
+            const text = (answer || '').trim();
             
-            if (paragraphs.length === 0) {
+            if (!text) {
                 pages.push({
                     questionIndex: questionIndex,
                     question: question,
@@ -1208,47 +1208,70 @@
                 return pages;
             }
 
-            let currentContent = '';
-            let currentCharCount = 0;
+            // 전체 텍스트를 HTML로 변환 (엔터 두번 = 문단, 엔터 한번 = 줄바꿈)
+            const formatText = (txt) => {
+                return txt
+                    .split(/\n\s*\n/)  // 엔터 두 번으로 문단 분리
+                    .map(para => `<p>${para.replace(/\n/g, '<br>')}</p>`)  // 엔터 한 번은 줄바꿈
+                    .join('');
+            };
+
+            let remainingText = text;
             let isFirstPage = true;
-            const maxChars = () => isFirstPage ? CHARS_PER_PAGE_FIRST : CHARS_PER_PAGE_CONT;
 
-            for (let i = 0; i < paragraphs.length; i++) {
-                const para = paragraphs[i];
-                const paraLength = para.length;
-
-                if (currentCharCount + paraLength > maxChars() && currentContent) {
-                    // 현재 페이지 저장
+            while (remainingText.length > 0) {
+                const maxChars = isFirstPage ? CHARS_PER_PAGE_FIRST : CHARS_PER_PAGE_CONT;
+                
+                if (remainingText.length <= maxChars) {
+                    // 남은 텍스트가 한 페이지에 들어감
                     pages.push({
                         questionIndex: questionIndex,
                         question: question,
                         teacher: teacher,
                         school: school,
-                        content: currentContent.trim(),
+                        content: formatText(remainingText),
                         isFirst: isFirstPage,
                         isContinuation: !isFirstPage
                     });
+                    break;
+                } else {
+                    // 페이지 분할 필요 - 적절한 위치에서 자르기
+                    let cutPoint = maxChars;
                     
-                    currentContent = '';
-                    currentCharCount = 0;
+                    // 문단 끝(\n\n)에서 자르기 시도
+                    let lastParaBreak = remainingText.lastIndexOf('\n\n', maxChars);
+                    if (lastParaBreak > maxChars * 0.5) {
+                        cutPoint = lastParaBreak;
+                    } else {
+                        // 줄바꿈(\n)에서 자르기 시도
+                        let lastLineBreak = remainingText.lastIndexOf('\n', maxChars);
+                        if (lastLineBreak > maxChars * 0.5) {
+                            cutPoint = lastLineBreak;
+                        } else {
+                            // 공백에서 자르기 시도
+                            let lastSpace = remainingText.lastIndexOf(' ', maxChars);
+                            if (lastSpace > maxChars * 0.5) {
+                                cutPoint = lastSpace;
+                            }
+                            // 아니면 그냥 maxChars에서 자름
+                        }
+                    }
+
+                    const pageText = remainingText.substring(0, cutPoint).trim();
+                    remainingText = remainingText.substring(cutPoint).trim();
+
+                    pages.push({
+                        questionIndex: questionIndex,
+                        question: question,
+                        teacher: teacher,
+                        school: school,
+                        content: formatText(pageText),
+                        isFirst: isFirstPage,
+                        isContinuation: !isFirstPage
+                    });
+
                     isFirstPage = false;
                 }
-
-                currentContent += `<p>${para.replace(/\n/g, '<br>')}</p>`;
-                currentCharCount += paraLength;
-            }
-
-            // 마지막 페이지
-            if (currentContent) {
-                pages.push({
-                    questionIndex: questionIndex,
-                    question: question,
-                    teacher: teacher,
-                    school: school,
-                    content: currentContent.trim(),
-                    isFirst: isFirstPage,
-                    isContinuation: !isFirstPage
-                });
             }
 
             return pages;
